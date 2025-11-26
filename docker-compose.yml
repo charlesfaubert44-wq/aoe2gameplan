@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aoe2user
+      POSTGRES_PASSWORD: aoe2password
+      POSTGRES_DB: aoe2gameplan
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://aoe2user:aoe2password@postgres:5432/aoe2gameplan"
+      NEXTAUTH_SECRET: "your-secret-change-in-production"
+      NEXTAUTH_URL: "http://localhost:3000"
+    depends_on:
+      - postgres
+    command: sh -c "npx prisma migrate deploy && node server.js"
+
+volumes:
+  postgres_data:
