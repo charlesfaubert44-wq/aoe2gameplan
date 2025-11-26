@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
+import { env } from '@/lib/env'
 
 // Type definitions
 interface SteamProfile {
@@ -36,8 +37,8 @@ export const authOptions: NextAuthOptions = {
         params: {
           'openid.ns': 'http://specs.openid.net/auth/2.0',
           'openid.mode': 'checkid_setup',
-          'openid.return_to': `${process.env.NEXTAUTH_URL}/api/auth/callback/steam`,
-          'openid.realm': process.env.NEXTAUTH_URL,
+          'openid.return_to': `${env.NEXTAUTH_URL}/api/auth/callback/steam`,
+          'openid.realm': env.NEXTAUTH_URL,
           'openid.identity': 'http://specs.openid.net/auth/2.0/identifier_select',
           'openid.claimed_id': 'http://specs.openid.net/auth/2.0/identifier_select',
         },
@@ -100,13 +101,13 @@ export const authOptions: NextAuthOptions = {
         async request(context: UserinfoContext) {
           const steamId = context.tokens.steamId
 
-          if (!process.env.STEAM_API_KEY) {
+          if (!env.STEAM_API_KEY) {
             throw new Error('STEAM_API_KEY not configured')
           }
 
           try {
             const response = await fetch(
-              `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${process.env.STEAM_API_KEY}&steamids=${steamId}`
+              `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${env.STEAM_API_KEY}&steamids=${steamId}`
             )
 
             if (!response.ok) {
@@ -137,7 +138,7 @@ export const authOptions: NextAuthOptions = {
       idToken: false,
       checks: ['none'],
       clientId: 'steam',
-      clientSecret: process.env.STEAM_API_KEY!,
+      clientSecret: env.STEAM_API_KEY || '',
     } as any, // Custom provider requires type assertion due to NextAuth's strict provider typing
   ],
   callbacks: {
@@ -175,5 +176,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: env.NEXTAUTH_SECRET,
 }
