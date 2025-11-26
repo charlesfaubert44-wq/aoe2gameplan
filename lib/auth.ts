@@ -2,6 +2,28 @@ import { NextAuthOptions } from 'next-auth'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 
+// Type definitions
+interface SteamProfile {
+  steamid: string
+  personaname: string
+  avatarfull: string
+  profileurl?: string
+  realname?: string
+}
+
+interface SteamTokens {
+  access_token: string
+  steamId: string
+}
+
+interface TokenContext {
+  params: Record<string, string>
+}
+
+interface UserinfoContext {
+  tokens: SteamTokens
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -21,9 +43,9 @@ export const authOptions: NextAuthOptions = {
         },
       },
       token: {
-        async request(context: any) {
+        async request(context: TokenContext) {
           // Extract the query parameters from the callback
-          const params = context.params as any
+          const params = context.params
 
           // Build the validation params
           const validationParams: Record<string, string> = {
@@ -67,7 +89,7 @@ export const authOptions: NextAuthOptions = {
               tokens: {
                 access_token: steamId,
                 steamId: steamId,
-              } as any,
+              },
             }
           }
 
@@ -75,22 +97,36 @@ export const authOptions: NextAuthOptions = {
         },
       },
       userinfo: {
-        async request(context: any) {
-          const steamId = (context.tokens as any).steamId
+        async request(context: UserinfoContext) {
+          const steamId = context.tokens.steamId
 
           if (!process.env.STEAM_API_KEY) {
             throw new Error('STEAM_API_KEY not configured')
           }
 
-          const response = await fetch(
-            `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${process.env.STEAM_API_KEY}&steamids=${steamId}`
-          )
+          try {
+            const response = await fetch(
+              `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${process.env.STEAM_API_KEY}&steamids=${steamId}`
+            )
 
-          const data = await response.json()
-          return data.response.players[0]
+            if (!response.ok) {
+              throw new Error(`Steam API request failed with status ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            if (!data.response?.players?.[0]) {
+              throw new Error('No player data returned from Steam API')
+            }
+
+            return data.response.players[0] as SteamProfile
+          } catch (error) {
+            console.error('Steam API error:', error)
+            throw new Error('Failed to fetch Steam player data')
+          }
         },
       },
-      profile(profile: any) {
+      profile(profile: SteamProfile) {
         return {
           id: profile.steamid,
           name: profile.personaname,
@@ -102,7 +138,7 @@ export const authOptions: NextAuthOptions = {
       checks: ['none'],
       clientId: 'steam',
       clientSecret: process.env.STEAM_API_KEY!,
-    } as any,
+    } as any, // Custom provider requires type assertion due to NextAuth's strict provider typing
   ],
   callbacks: {
     async session({ session, user }) {
@@ -119,10 +155,18 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account, profile }) {
       // Store Steam ID in the user record
       if (account?.provider === 'steam' && profile) {
-        const steamId = (profile as any).steamid
-        await prisma.user.update({
+        const steamId = (profile as SteamProfile).steamid
+        // Use upsert to handle race condition on first sign-in
+        await prisma.user.upsert({
           where: { id: user.id },
-          data: { steamId },
+          update: { steamId },
+          create: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            steamId,
+          },
         })
       }
       return true
