@@ -32,7 +32,7 @@ export function BuildOrderForm() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<CreateBuildOrderInput>({
+  } = useForm({
     resolver: zodResolver(createBuildOrderSchema),
     defaultValues: {
       title: '',

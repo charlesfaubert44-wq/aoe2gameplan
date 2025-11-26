@@ -13,12 +13,7 @@ interface BuildOrderStep {
   villagerCount: number
   action: string
   description: string
-  resources: {
-    wood: number
-    food: number
-    gold: number
-    stone: number
-  }
+  resources: any // Using any for Prisma's Json type
 }
 
 interface BuildOrderViewerProps {
