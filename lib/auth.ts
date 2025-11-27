@@ -27,8 +27,7 @@ interface UserinfoContext {
 
 export const authOptions: NextAuthOptions = {
   // Only use Prisma adapter at runtime, not during build (when DB isn't available)
-  // @ts-expect-error - adapter can be undefined during build
-  adapter: process.env.SKIP_PRISMA_ADAPTER === 'true' ? undefined : PrismaAdapter(prisma),
+  adapter: (process.env.SKIP_PRISMA_ADAPTER === 'true' ? undefined : PrismaAdapter(prisma)) as any,
   providers: [
     {
       id: 'steam',
