@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { createBuildOrderSchema } from '@/lib/validations/build-order'
 
+// Disable static optimization for this route
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
