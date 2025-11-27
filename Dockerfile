@@ -20,7 +20,9 @@ COPY . .
 RUN npx prisma generate
 
 # Build Next.js
-ENV NEXT_TELEMETRY_DISABLED 1
+# Skip Prisma adapter during build (DB not available yet)
+ENV SKIP_PRISMA_ADAPTER=true
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Production image, copy all the files and run next
